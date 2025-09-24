@@ -3,6 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from ts_arithmetic_svc.exceptions import ArithmeticServiceError
+from ts_arithmetic_svc.routers import calculate_router
 
 # Set global decimal context precision for high precision arithmetic
 decimal.getcontext().prec = 28
@@ -44,3 +45,4 @@ async def root() -> dict[str, str]:
     return {"message": "Arithmetic Service is running"}
 
 # add routers
+app.include_router(calculate_router)
