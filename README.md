@@ -72,6 +72,113 @@ poetry run uvicorn ts_arithmetic_svc.app:app --host 0.0.0.0 --port 8000
 curl http://0.0.0.0:8000/
 ```
 
+### Calculate Endpoint
+
+**POST /calculate**
+
+**Purpose:** Perform high-precision arithmetic calculations (add, subtract, multiply, divide) using Python's Decimal module to preserve precision. Operands must be within the range of ±10^10.
+
+**Request Body:**
+- `operation`: One of ["add", "subtract", "multiply", "divide"]
+- `a`: Decimal number (string or number), between -10000000000 and 10000000000
+- `b`: Decimal number (string or number), between -10000000000 and 10000000000
+
+**Responses:**
+- **200 OK**: JSON object containing result, operation, and operands (all decimal values serialized as strings to preserve precision)
+- **400 Bad Request**: For domain errors such as division by zero. Returns `{"detail": "..."}`
+- **422 Unprocessable Entity**: Pydantic validation errors (e.g., operand out of range)
+
+**Examples:**
+
+#### 1. Successful Addition (HTTP 200)
+```bash
+curl -X POST \
+  http://0.0.0.0:8000/calculate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "add",
+    "a": "1.25",
+    "b": "2.75"
+  }'
+```
+
+**Expected Response (HTTP 200):**
+```json
+{
+  "result": "4.00",
+  "operation": "add",
+  "operands": ["1.25", "2.75"]
+}
+```
+
+#### 2. Successful Division (HTTP 200)
+```bash
+curl -X POST \
+  http://0.0.0.0:8000/calculate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "divide",
+    "a": "10",
+    "b": "4"
+  }'
+```
+
+**Expected Response (HTTP 200):**
+```json
+{
+  "result": "2.5",
+  "operation": "divide",
+  "operands": ["10", "4"]
+}
+```
+
+#### 3. Division by Zero Error (HTTP 400)
+```bash
+curl -X POST \
+  http://0.0.0.0:8000/calculate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "divide",
+    "a": "5",
+    "b": "0"
+  }'
+```
+
+**Expected Response (HTTP 400):**
+```json
+{
+  "detail": "Division by zero is not allowed"
+}
+```
+
+#### 4. Operand Out of Range Error (HTTP 422)
+```bash
+# Here, operand 'a' exceeds the maximum allowed absolute value (10^10)
+curl -X POST \
+  http://0.0.0.0:8000/calculate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "add",
+    "a": "10000000001",
+    "b": "1"
+  }'
+```
+
+**Expected Response (HTTP 422):**
+```json
+{
+  "detail": [
+    {
+      "type": "less_than_equal",
+      "loc": ["body", "a"],
+      "msg": "Input should be less than or equal to 10000000000",
+      "input": "10000000001",
+      "ctx": {"le": 10000000000}
+    }
+  ]
+}
+```
+
 ### API Documentation
 
 Once the service is running, you can access:
