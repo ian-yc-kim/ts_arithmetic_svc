@@ -30,6 +30,14 @@ class TestOperationType:
         actual_operations = {op.value for op in OperationType}
         assert actual_operations == expected_operations
 
+    def test_operation_type_invalid_construction(self) -> None:
+        """Test that constructing OperationType with invalid value raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            OperationType("power")
+        
+        # Verify error message contains information about invalid value
+        assert "power" in str(exc_info.value)
+
 
 class TestCalculationRequest:
     """Test cases for CalculationRequest model."""
@@ -112,6 +120,66 @@ class TestCalculationRequest:
         
         errors = exc_info.value.errors()
         assert any("b" in error["loc"] for error in errors)
+
+    def test_calculation_request_operand_out_of_range_complete(self) -> None:
+        """Test complete coverage of out-of-range operand validation."""
+        # Test operand 'a' too small (negative direction)
+        with pytest.raises(ValidationError) as exc_info:
+            CalculationRequest(
+                operation=OperationType.ADD,
+                a=-MAX_ABS_OPERAND - 1,
+                b=Decimal("1")
+            )
+        
+        errors = exc_info.value.errors()
+        assert any("a" in error["loc"] for error in errors)
+        
+        # Test operand 'b' too large (positive direction)
+        with pytest.raises(ValidationError) as exc_info:
+            CalculationRequest(
+                operation=OperationType.ADD,
+                a=Decimal("1"),
+                b=MAX_ABS_OPERAND + 1
+            )
+        
+        errors = exc_info.value.errors()
+        assert any("b" in error["loc"] for error in errors)
+
+    def test_calculation_request_invalid_operand_types(self) -> None:
+        """Test that non-numeric string operands raise ValidationError."""
+        # Test operand 'a' as non-numeric string
+        with pytest.raises(ValidationError) as exc_info:
+            CalculationRequest(
+                operation=OperationType.ADD,
+                a="invalid",  # type: ignore
+                b=Decimal("5")
+            )
+        
+        errors = exc_info.value.errors()
+        assert any("a" in error["loc"] for error in errors)
+        # Check for decimal parsing error type or relevant error message
+        assert any(
+            error.get("type") == "decimal_parsing" or
+            "decimal" in error.get("msg", "").lower()
+            for error in errors
+        )
+        
+        # Test operand 'b' as non-numeric string
+        with pytest.raises(ValidationError) as exc_info:
+            CalculationRequest(
+                operation=OperationType.ADD,
+                a=Decimal("10"),
+                b="invalid"  # type: ignore
+            )
+        
+        errors = exc_info.value.errors()
+        assert any("b" in error["loc"] for error in errors)
+        # Check for decimal parsing error type or relevant error message
+        assert any(
+            error.get("type") == "decimal_parsing" or
+            "decimal" in error.get("msg", "").lower()
+            for error in errors
+        )
 
     def test_calculation_request_decimal_conversion(self) -> None:
         """Test that numeric values are properly converted to Decimal."""
