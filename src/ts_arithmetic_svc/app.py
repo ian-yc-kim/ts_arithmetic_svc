@@ -1,5 +1,8 @@
 import decimal
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+from ts_arithmetic_svc.exceptions import ArithmeticServiceError
 
 # Set global decimal context precision for high precision arithmetic
 decimal.getcontext().prec = 28
@@ -10,6 +13,25 @@ app = FastAPI(
     version="1.0.0",
     debug=True
 )
+
+
+@app.exception_handler(ArithmeticServiceError)
+async def arithmetic_service_error_handler(
+    request: Request, exc: ArithmeticServiceError
+) -> JSONResponse:
+    """Exception handler for ArithmeticServiceError.
+    
+    Args:
+        request: The incoming request
+        exc: The ArithmeticServiceError instance
+        
+    Returns:
+        JSONResponse: Response with status code and detail from the exception
+    """
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
 
 
 @app.get("/")
